@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sim worker smoke test</title>
+    <style>
+      body { font: 13px/1.4 ui-monospace, monospace; background: #0b1020; color: #dfe7ff; margin: 16px; }
+      pre { white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <h3>Sim worker smoke test (dev only)</h3>
+    <div id="status" data-testid="status">running</div>
+    <pre id="out" data-testid="out"></pre>
+    <script type="module" src="./smoke.ts"></script>
+  </body>
+</html>

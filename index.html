@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Home Energy Lab · MPC vs perfect hindsight</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%230b1220'/%3E%3Cpath d='M9.3 2 4 9.2h3.3L6.5 14l5.6-7.4H8.8L9.3 2z' fill='%23ffd75e'/%3E%3C/svg%3E"
+    />
+    <style>
+      /* First paint before the stylesheet module arrives. */
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #070b14;
+        color: #e8eefc;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <section id="stage" aria-label="3D view of both houses">
+        <div id="scene" data-testid="scene"></div>
+
+        <header class="topbar glass" data-hud-overlay>
+          <div class="brand">
+            <svg class="brand-icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+              <path d="M10 2.2 2.5 8.6V17a.8.8 0 0 0 .8.8h13.4a.8.8 0 0 0 .8-.8V8.6L10 2.2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+              <path d="M10.9 7.2 7.6 11.6h2.1l-.6 3.2 3.3-4.4h-2.1l.6-3.2z" fill="currentColor" />
+            </svg>
+            <span class="brand-name">Home Energy Lab</span>
+            <span class="brand-sub" id="brand-sub"></span>
+          </div>
+          <div class="clock" data-testid="clock" aria-live="off">Day 1 · 07:00</div>
+          <div class="latency" data-testid="latency" title="Round trip of the last re-solve (request posted to result applied), and the worker's own timing">
+            starting solver…
+          </div>
+        </header>
+
+        <aside class="card card-mpc glass" data-hud-overlay id="card-mpc" aria-label="MPC house"></aside>
+        <aside class="card card-dp glass" data-hud-overlay id="card-dp" aria-label="DP house"></aside>
+
+        <div class="gap-pill glass" data-hud-overlay id="gap-pill">
+          <div class="gap-cap">MPC − DP gap</div>
+          <div class="gap-value" data-testid="gap">–</div>
+          <div class="gap-total" id="gap-total"></div>
+        </div>
+
+        <div class="arbitrage glass pending" data-hud-overlay data-testid="arbitrage" id="arbitrage" tabindex="0">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+            <path d="M2 5.5h9.5M9 3l2.5 2.5L9 8M14 10.5H4.5M7 8l-2.5 2.5L7 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span class="arb-headline" id="arb-headline">Does grid arbitrage pay? Working it out…</span>
+        </div>
+        <div class="arb-detail glass" id="arb-detail" role="note"></div>
+
+        <div class="loading glass" id="loading" role="status" data-hud-overlay>
+          <span class="spinner" aria-hidden="true"></span>
+          <span id="loading-text">Loading the LP solver…</span>
+        </div>
+
+        <div class="toast" id="toast" role="alert" hidden></div>
+      </section>
+
+      <section id="timeline-panel" class="glass" aria-label="Scenario timeline">
+        <div class="tl-head">
+          <span class="tl-title">Scenario</span>
+          <div class="legend" id="legend" aria-hidden="true"></div>
+          <span class="tl-hint">drag a chip: ↔ time · ↕ size</span>
+          <div class="tl-actions">
+            <button type="button" class="btn small" id="add-spike" data-testid="add-spike" title="Add a price spike near the playhead">
+              <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true"><path d="M9.3 1 3.5 9h3.6L6.2 15l6.3-8.4H8.8L9.3 1z" fill="currentColor" /></svg>
+              + spike
+            </button>
+            <button type="button" class="btn small" id="add-cloud" data-testid="add-cloud" title="Add a cloud event near the playhead">
+              <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M4.6 12.5a3.1 3.1 0 0 1-.5-6.16 4.2 4.2 0 0 1 8.06 1.02A2.6 2.6 0 0 1 11.6 12.5H4.6z" fill="currentColor" /></svg>
+              + cloud
+            </button>
+          </div>
+        </div>
+        <div class="tl-plot" id="timeline" data-testid="timeline"></div>
+      </section>
+
+      <footer id="controls" class="glass" aria-label="Playback controls">
+        <button type="button" class="btn icon primary" id="play" data-testid="play" aria-label="Pause" aria-pressed="true" title="Play / pause (Space)">
+          <svg class="i-play" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 2.5v11l9-5.5-9-5.5z" fill="currentColor" /></svg>
+          <svg class="i-pause" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z" fill="currentColor" /></svg>
+        </button>
+        <button type="button" class="btn" id="reset" data-testid="reset" title="Back to the default scenario at 07:00">
+          <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7M3 2.5v2.8h2.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          Reset
+        </button>
+        <label class="field">
+          <span class="field-cap">Speed</span>
+          <select id="speed" data-testid="speed" title="Simulated hours per real second">
+            <option value="0.25">0.25 h/s</option>
+            <option value="0.5">0.5 h/s</option>
+            <option value="1" selected>1 h/s</option>
+            <option value="2">2 h/s</option>
+            <option value="4">4 h/s</option>
+          </select>
+        </label>
+        <div class="scrub">
+          <span class="scrub-time" id="scrub-time">Day 1 · 07:00</span>
+          <input type="range" id="scrub" data-testid="scrub" min="0" max="48" step="0.01" value="0" aria-label="Scenario time" />
+          <span class="scrub-end" id="scrub-end"></span>
+        </div>
+        <label class="field">
+          <span class="field-cap">Forecast error</span>
+          <input type="range" id="forecast-error" data-testid="forecast-error" min="0" max="1" step="0.05" value="0" />
+          <output class="field-val" id="forecast-error-value" for="forecast-error">0%</output>
+        </label>
+        <button type="button" class="btn" id="reroll" data-testid="reroll" title="New random seed: different weather and wholesale prices">
+          <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+            <rect x="2.2" y="2.2" width="11.6" height="11.6" rx="2.6" fill="none" stroke="currentColor" stroke-width="1.5" />
+            <circle cx="5.6" cy="5.6" r="1.1" fill="currentColor" /><circle cx="10.4" cy="10.4" r="1.1" fill="currentColor" /><circle cx="8" cy="8" r="1.1" fill="currentColor" />
+          </svg>
+          New weather &amp; prices
+        </button>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scene dev harness</title>
+<style>
+  html, body { margin: 0; background: #0b0f17; color: #cfd8e6; font: 12px system-ui, sans-serif; }
+  #wrap { padding: 8px; }
+  #view { position: relative; width: 1440px; height: 520px; border-radius: 8px; overflow: hidden; background: #111; }
+  #info { margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .hud { position: absolute; background: rgba(255,60,60,.28); border: 1px solid rgba(255,120,120,.7); pointer-events: none; z-index: 5; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="view"></div>
+  <div id="info"></div>
+</div>
+<script type="module" src="./demo.ts"></script>
+</body>
+</html>
